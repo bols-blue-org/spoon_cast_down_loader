@@ -11,7 +11,28 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/urfave/cli"
 )
+
+func Download(ctx *cli.Context) error {
+	id := ctx.String("id")
+
+	data, err := LoadMetaData(id)
+	if err != nil {
+		log.Println("Error, " + err.Error() + "!")
+		return err
+	}
+	fmt.Printf("%v", data)
+	err = data.Download()
+	if err != nil {
+		log.Println("Error, " + err.Error() + "!")
+		return err
+	}
+
+	log.Println("Download, " + id + "!")
+	return err
+}
 
 var client = &http.Client{Timeout: time.Duration(10) * time.Second}
 
