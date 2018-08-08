@@ -3,6 +3,7 @@ package cast
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,7 +24,8 @@ func Download(ctx *cli.Context) error {
 		log.Println("Error, " + err.Error() + "!")
 		return err
 	}
-	fmt.Printf("%v", data)
+	time.Sleep(time.Duration(1) * time.Second)
+	fmt.Printf("%v\n", data)
 	err = data.Download()
 	if err != nil {
 		log.Println("Error, " + err.Error() + "!")
@@ -34,7 +36,7 @@ func Download(ctx *cli.Context) error {
 	return err
 }
 
-var client = &http.Client{Timeout: time.Duration(10) * time.Second}
+var client = &http.Client{Timeout: time.Duration(120) * time.Second}
 
 func LoadMetaData(id string) (MetaData, error) {
 	url := "https://jp-api.spooncast.net/casts/" + id + "/"
@@ -49,7 +51,6 @@ func LoadMetaData(id string) (MetaData, error) {
 		fmt.Println("JSON Unmarshal error:", err)
 		return *data, err
 	}
-	fmt.Printf("%v\n", data)
 	return *data, nil
 }
 
@@ -107,9 +108,15 @@ func (a MetaData) downloadFromURL(url string, retryMaxCount int) (*bytes.Buffer,
 
 func (a MetaData) Download() error {
 	retry := 2
-	buff, err := a.downloadFromURL(a.Results[0].VoiceURL, retry)
-	if err != nil {
-		return err
+	error_count := 0
+	err := errors.New("init")
+	var buff io.Reader
+	for err != nil {
+		buff, err = a.downloadFromURL(a.Results[0].VoiceURL, retry)
+		error_count++
+		if error_count == retry {
+			return err
+		}
 	}
 
 	file, err := os.OpenFile(filepath.Base(a.Results[0].VoiceURL), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
